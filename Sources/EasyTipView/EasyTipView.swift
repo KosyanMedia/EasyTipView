@@ -147,7 +147,7 @@ public extension EasyTipView {
         let superview = superview!
         #else
         precondition(superview == nil || view.hasSuperview(superview!), "The supplied superview <\(superview!)> is not a direct nor an indirect superview of the supplied reference view <\(view)>. The superview passed to this method should be a direct or an indirect superview of the reference view. To display the tooltip within the main window, ignore the superview parameter.")
-        
+
         let superview = superview ?? UIApplication.shared.windows.first!
         #endif
 
@@ -356,7 +356,7 @@ open class EasyTipView: UIView {
         var tipViewSize =
             CGSize(
                 width: self.contentSize.width + self.preferences.positioning.contentInsets.left + self.preferences.positioning.contentInsets.right + self.preferences.positioning.bubbleInsets.left + self.preferences.positioning.bubbleInsets.right,
-                height: self.contentSize.height + self.preferences.positioning.contentInsets.top + self.preferences.positioning.contentInsets.bottom + self.preferences.positioning.bubbleInsets.top + self.preferences.positioning.bubbleInsets.bottom + self.preferences.drawing.arrowHeight)
+                height: self.contentSize.height + self.preferences.positioning.contentInsets.top + self.preferences.positioning.contentInsets.bottom + self.preferences.positioning.bubbleInsets.top + self.preferences.positioning.bubbleInsets.bottom)
 
         return tipViewSize
     }()
@@ -431,23 +431,29 @@ open class EasyTipView: UIView {
     fileprivate func computeFrame(arrowPosition position: ArrowPosition, refViewFrame: CGRect, superviewFrame: CGRect) -> CGRect {
         var xOrigin: CGFloat = 0
         var yOrigin: CGFloat = 0
+        var width = tipViewSize.width
+        var height = tipViewSize.height
 
         switch position {
         case .top, .any:
             xOrigin = refViewFrame.center.x - tipViewSize.width / 2
             yOrigin = refViewFrame.y + refViewFrame.height
+            height += preferences.drawing.arrowHeight
         case .bottom:
             xOrigin = refViewFrame.center.x - tipViewSize.width / 2
-            yOrigin = refViewFrame.y - tipViewSize.height
+            yOrigin = refViewFrame.y - tipViewSize.height - preferences.drawing.arrowHeight
+            height += preferences.drawing.arrowHeight
         case .right:
-            xOrigin = refViewFrame.x - tipViewSize.width
+            xOrigin = refViewFrame.x - tipViewSize.width - preferences.drawing.arrowHeight
             yOrigin = refViewFrame.center.y - tipViewSize.height / 2
+            width += preferences.drawing.arrowHeight
         case .left:
             xOrigin = refViewFrame.x + refViewFrame.width
             yOrigin = refViewFrame.center.y - tipViewSize.height / 2
+            width += preferences.drawing.arrowHeight
         }
 
-        var frame = CGRect(x: xOrigin, y: yOrigin, width: tipViewSize.width, height: tipViewSize.height)
+        var frame = CGRect(x: xOrigin, y: yOrigin, width: width, height: height)
         adjustFrame(&frame, forSuperviewFrame: superviewFrame)
         return frame
     }
@@ -514,7 +520,12 @@ open class EasyTipView: UIView {
                 arrowTipXOrigin = abs(frame.x - refViewFrame.x) + refViewFrame.width / 2
             }
 
-            arrowTip = CGPoint(x: arrowTipXOrigin, y: position == .bottom ? tipViewSize.height - preferences.positioning.bubbleInsets.bottom :  preferences.positioning.bubbleInsets.top)
+            arrowTip = CGPoint(
+                x: arrowTipXOrigin,
+                y: position == .bottom
+                ? tipViewSize.height + preferences.drawing.arrowHeight - preferences.positioning.bubbleInsets.bottom
+                : preferences.positioning.bubbleInsets.top
+            )
         case .right, .left:
             var arrowTipYOrigin: CGFloat
             if frame.height < refViewFrame.height {
@@ -523,7 +534,12 @@ open class EasyTipView: UIView {
                 arrowTipYOrigin = abs(frame.y - refViewFrame.y) + refViewFrame.height / 2
             }
 
-            arrowTip = CGPoint(x: preferences.drawing.arrowPosition == .left ? preferences.positioning.bubbleInsets.left : tipViewSize.width - preferences.positioning.bubbleInsets.right, y: arrowTipYOrigin)
+            arrowTip = CGPoint(
+                x: preferences.drawing.arrowPosition == .left
+                ? preferences.positioning.bubbleInsets.left
+                : tipViewSize.width + preferences.drawing.arrowHeight - preferences.positioning.bubbleInsets.right,
+                y: arrowTipYOrigin
+            )
         }
 
         if case .view(let contentView) = content {
@@ -600,7 +616,7 @@ open class EasyTipView: UIView {
     fileprivate func drawBubbleTopShape(_ frame: CGRect, cornerRadius: CGFloat, path: CGMutablePath) {
 
         path.addArc(tangent1End: CGPoint(x: frame.x, y: frame.y), tangent2End: CGPoint(x: frame.x, y: frame.y + frame.height), radius: cornerRadius)
-        path.addArc(tangent1End: CGPoint(x: frame.x, y:  frame.y + frame.height), tangent2End: CGPoint(x: frame.x + frame.width, y: frame.y + frame.height), radius: cornerRadius)
+        path.addArc(tangent1End: CGPoint(x: frame.x, y: frame.y + frame.height), tangent2End: CGPoint(x: frame.x + frame.width, y: frame.y + frame.height), radius: cornerRadius)
         path.addArc(tangent1End: CGPoint(x: frame.x + frame.width, y: frame.y + frame.height), tangent2End: CGPoint(x: frame.x + frame.width, y: frame.y), radius: cornerRadius)
         path.addArc(tangent1End: CGPoint(x: frame.x + frame.width, y: frame.y), tangent2End: CGPoint(x: frame.x, y: frame.y), radius: cornerRadius)
     }
@@ -678,7 +694,7 @@ open class EasyTipView: UIView {
         let bubbleFrame = getBubbleFrame()
 
         let context = UIGraphicsGetCurrentContext()!
-        context.saveGState ()
+        context.saveGState()
 
         drawBubble(bubbleFrame, arrowPosition: preferences.drawing.arrowPosition, context: context)
 
@@ -705,14 +721,14 @@ open class EasyTipView: UIView {
         case .bottom, .top, .any:
 
             bubbleWidth = tipViewSize.width - preferences.positioning.bubbleInsets.left - preferences.positioning.bubbleInsets.right
-            bubbleHeight = tipViewSize.height - preferences.positioning.bubbleInsets.top - preferences.positioning.bubbleInsets.bottom - preferences.drawing.arrowHeight
+            bubbleHeight = tipViewSize.height - preferences.positioning.bubbleInsets.top - preferences.positioning.bubbleInsets.bottom
 
             bubbleXOrigin = preferences.positioning.bubbleInsets.left
             bubbleYOrigin = arrowPosition == .bottom ? preferences.positioning.bubbleInsets.top : preferences.positioning.bubbleInsets.top + preferences.drawing.arrowHeight
 
         case .left, .right:
 
-            bubbleWidth = tipViewSize.width - preferences.positioning.bubbleInsets.left - preferences.positioning.bubbleInsets.right - preferences.drawing.arrowHeight
+            bubbleWidth = tipViewSize.width - preferences.positioning.bubbleInsets.left - preferences.positioning.bubbleInsets.right
             bubbleHeight = tipViewSize.height - preferences.positioning.bubbleInsets.top - preferences.positioning.bubbleInsets.bottom
 
             bubbleXOrigin = arrowPosition == .right ? preferences.positioning.bubbleInsets.left : preferences.positioning.bubbleInsets.left + preferences.drawing.arrowHeight
