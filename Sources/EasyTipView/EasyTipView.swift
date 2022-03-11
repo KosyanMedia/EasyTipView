@@ -151,14 +151,16 @@ public extension EasyTipView {
         let superview = superview ?? UIApplication.shared.windows.first!
         #endif
 
-        let initialTransform = preferences.animating.showInitialTransform
-        let finalTransform = preferences.animating.showFinalTransform
-        let initialAlpha = preferences.animating.showInitialAlpha
-        let damping = preferences.animating.springDamping
-        let velocity = preferences.animating.springVelocity
-
         presentingView = view
         arrange(withinSuperview: superview)
+
+        let animating = preferences.animatingForArrowPosition(preferences.drawing.arrowPosition) ?? preferences.animating
+
+        let initialTransform = animating.showInitialTransform
+        let finalTransform = animating.showFinalTransform
+        let initialAlpha = animating.showInitialAlpha
+        let damping = animating.springDamping
+        let velocity = animating.springVelocity
 
         transform = initialTransform
         alpha = initialAlpha
@@ -174,8 +176,8 @@ public extension EasyTipView {
         }
 
         if animated {
-            UIView.animate(withDuration: preferences.animating.showDuration, delay: 0, usingSpringWithDamping: damping, initialSpringVelocity: velocity, options: [.curveEaseInOut], animations: animations, completion: nil)
-        }else{
+            UIView.animate(withDuration: animating.showDuration, delay: 0, usingSpringWithDamping: damping, initialSpringVelocity: velocity, options: [.curveEaseInOut], animations: animations, completion: nil)
+        } else {
             animations()
         }
     }
@@ -187,12 +189,14 @@ public extension EasyTipView {
      */
     func dismiss(withCompletion completion: (() -> ())? = nil){
 
-        let damping = preferences.animating.springDamping
-        let velocity = preferences.animating.springVelocity
+        let animating = preferences.animatingForArrowPosition(preferences.drawing.arrowPosition) ?? preferences.animating
 
-        UIView.animate(withDuration: preferences.animating.dismissDuration, delay: 0, usingSpringWithDamping: damping, initialSpringVelocity: velocity, options: [.curveEaseInOut], animations: {
-            self.transform = self.preferences.animating.dismissTransform
-            self.alpha = self.preferences.animating.dismissFinalAlpha
+        let damping = animating.springDamping
+        let velocity = animating.springVelocity
+
+        UIView.animate(withDuration: animating.dismissDuration, delay: 0, usingSpringWithDamping: damping, initialSpringVelocity: velocity, options: [.curveEaseInOut], animations: {
+            self.transform = animating.dismissTransform
+            self.alpha = animating.dismissFinalAlpha
         }) { (finished) -> Void in
             completion?()
             self.delegate?.easyTipViewDidDismiss(self)
@@ -259,6 +263,7 @@ open class EasyTipView: UIView {
         public var drawing      = Drawing()
         public var positioning  = Positioning()
         public var animating    = Animating()
+        public var animatingForArrowPosition: (ArrowPosition) -> Animating? = { _ in nil }
         public var hasBorder : Bool {
             return drawing.borderWidth > 0 && drawing.borderColor != UIColor.clear
         }
